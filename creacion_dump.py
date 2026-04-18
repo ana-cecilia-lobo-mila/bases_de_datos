@@ -182,16 +182,16 @@ def generate_anime_genre_sql(pairs: list[tuple[int, int]]) -> str:
 # Fuente JSON: campos directos del anime, ej: anime["data"]["season"] -> "fall"
 
 # TODO: implementar extraccion y generacion SQL para season, rating, type, source
-def extract_season(animes: list[dict]) -> list[dict]:
+def extract_season(animes: list[dict]) -> dict[str, dict]:
     """Extrae las temporadas """
-    seasons: dict[int, dict] = {}
+    seasons = {}
     i = 1
     for anime in animes:
         season = anime["data"].get("season")
-        sid = i
-        if sid not in seasons and season is not None:
+
+        if season not in seasons and season is not None:
             seasons[season] = {
-                "season_id": sid,
+                "season_id": i,
                 "name": season
             }
             i+= 1
@@ -214,12 +214,13 @@ def generate_season_sql(seasons: list[dict]) -> str:
         )
     return "\n".join(lines)
 
-def extract_rating(animes: list[dict]) -> list[dict]:
+def extract_rating(animes: list[dict]) -> dict[str, dict]:
     """Extrae el rating de todos los animes."""
-    ratings: dict[int, dict] = {}
+    ratings = {}
     i = 1
     for anime in animes:
         rating = anime["data"].get("rating")
+
         if rating not in ratings:
             ratings[rating] = {
                 "rating_id": i,
@@ -245,12 +246,13 @@ def generate_rating_sql(ratings: list[dict]) -> str:
         )
     return "\n".join(lines)
 
-def extract_type(animes: list[dict]) -> list[dict]:
+def extract_type(animes: list[dict]) -> dict[str, dict]:
     """Extrae el tipo de todos los animes."""
-    types: dict[int, dict] = {}
+    types = {}
     i = 1
     for anime in animes:
         type = anime["data"].get("type")
+
         if type not in types:
             types[type] = {
                 "type_id": i,
@@ -276,12 +278,13 @@ def generate_type_sql(types: list[dict]) -> str:
         )
     return "\n".join(lines)
 
-def extract_source(animes: list[dict]) -> list[dict]:
+def extract_source(animes: list[dict]) -> dict[str, dict]:
     """Extrae el source de todos los animes."""
-    sources: dict[int, dict] = {}
+    sources = {}
     i = 1
     for anime in animes:
         source = anime["data"].get("source")
+
         if source not in sources:
             sources[source] = {
                 "source_id": i,
@@ -332,61 +335,59 @@ def generate_source_sql(sources: list[dict]) -> str:
 
 # TODO: implementar extraccion y generacion SQL para anime
 def extract_anime(animes: list[dict], seasons, ratings, types, sources) -> list[dict]:
-    animes_list = {}
+    animes_list = []
 
     for anime in animes:
-        data = anime["data"]
-        anime_id = data["mal_id"]
+        data = anime.get("data", {})
+        anime_id = data.get("mal_id")
 
-        if anime_id not in animes_list:
+        season = data.get("season")
+        rating = data.get("rating")
+        type_ = data.get("type")
+        source = data.get("source")
+        aired = data.get("aired", {})
+        trailer = data.get("trailer", {})
+        broadcast = data.get("broadcast", {})
 
-            season = data.get("season")
-            rating = data.get("rating")
-            type_ = data.get("type")
-            source = data.get("source")
-            aired = data.get("aired", {})
-            trailer = data.get("trailer", {})
-            broadcast = data.get("broadcast", {})
+        animes_list.append({
+            "anime_id": anime_id,
+            "url": data.get("url"),
+            "image_url": data.get("images", {}).get("jpg", {}).get("image_url"),
+            "small_image_url": data.get("images", {}).get("jpg", {}).get("small_image_url"),
+            "large_image_url": data.get("images", {}).get("jpg", {}).get("large_image_url"),
+            "trailer_youtube_id": trailer.get("youtube_id"),
+            "trailer_url": trailer.get("url"),
+            "trailer_embed_url": trailer.get("embed_url"),
+            "approved": data.get("approved"),
+            "title_default": data.get("title"),
+            "title_japanese": data.get("title_japanese"),
+            "title_english": data.get("title_english"),
+            "episodes": data.get("episodes"),
+            "status": data.get("status"),
+            "airing": data.get("airing"),
+            "aired_from": aired.get("from")[:10] if aired.get("from") else None,
+            "aired_to": aired.get("to")[:10] if aired.get("to") else None,
+            "duration": data.get("duration"),
+            "score": data.get("score"),
+            "scored_by": data.get("scored_by"),
+            "rank": data.get("rank"),
+            "popularity": data.get("popularity"),
+            "members": data.get("members"),
+            "favorites": data.get("favorites"),
+            "synopsis": data.get("synopsis"),
+            "background": data.get("background"),
+            "year": data.get("year"),
+            "broadcast_day": broadcast.get("day"),
+            "broadcast_time": broadcast.get("time"),
+            "broadcast_timezone": broadcast.get("timezone"),
+            "broadcast_string": broadcast.get("string"),
+            "season_id": seasons.get(season, {}).get("season_id"),
+            "rating_id": ratings.get(rating, {}).get("rating_id"),
+            "type_id": types.get(type_, {}).get("type_id"),
+            "source_id": sources.get(source, {}).get("source_id")
+            })
 
-            animes_list[anime_id] = {
-                "anime_id": anime_id,
-                "url": data.get("url"),
-                "image_url": data.get("images", {}).get("jpg", {}).get("image_url"),
-                "small_image_url": data.get("images", {}).get("jpg", {}).get("small_image_url"),
-                "large_image_url": data.get("images", {}).get("jpg", {}).get("large_image_url"),
-                "trailer_youtube_id": trailer.get("youtube_id"),
-                "trailer_url": trailer.get("url"),
-                "trailer_embed_url": trailer.get("embed_url"),
-                "approved": data.get("approved"),
-                "title_default": data.get("title"),
-                "title_japanese": data.get("title_japanese"),
-                "title_english": data.get("title_english"),
-                "episodes": data.get("episodes"),
-                "status": data.get("status"),
-                "airing": data.get("airing"),
-                "aired_from": aired.get("from")[:10] if aired.get("from") else None,
-                "aired_to": aired.get("to")[:10] if aired.get("to") else None,
-                "duration": data.get("duration"),
-                "score": data.get("score"),
-                "scored_by": data.get("scored_by"),
-                "rank": data.get("rank"),
-                "popularity": data.get("popularity"),
-                "members": data.get("members"),
-                "favorites": data.get("favorites"),
-                "synopsis": data.get("synopsis"),
-                "background": data.get("background"),
-                "year": data.get("year"),
-                "broadcast_day": broadcast.get("day"),
-                "broadcast_time": broadcast.get("time"),
-                "broadcast_timezone": broadcast.get("timezone"),
-                "broadcast_string": broadcast.get("string"),
-                "season_id": seasons.get(season, {}).get("season_id"),
-                "rating_id": ratings.get(rating, {}).get("rating_id"),
-                "type_id": types.get(type_, {}).get("type_id"),
-                "source_id": sources.get(source, {}).get("source_id")
-            }
-
-    return list(animes_list.values())
+    return animes_list
 
 def generate_anime_sql(animes_list: list[dict]) -> str:
     lines: list[str] = [
@@ -438,7 +439,6 @@ def generate_anime_sql(animes_list: list[dict]) -> str:
         )
     return "\n".join(lines)
 
-
 # =============================================================================
 # TODO: Tabla title
 # =============================================================================
@@ -454,14 +454,14 @@ def extract_titles(animes: list[dict]) -> list[dict]:
     i = 1
 
     for anime in animes:
-        anime_id = anime["data"]["mal_id"]
+        data = anime.get("data", {}).get("titles", [])
 
-        for t in anime["data"].get("titles", []):
+        for d in data:
             titles.append({
                 "title_id": i,
-                "anime_id": anime_id,
-                "type": t.get("type"),
-                "title": t.get("title")
+                "anime_id": anime.get("data", {}).get("mal_id"),
+                "type": d.get("type"),
+                "title": d.get("title")
             })
             i += 1
 
@@ -511,16 +511,20 @@ def generate_title_sql(titles: list[dict]) -> str:
 # TODO: implementar extraccion y generacion SQL para cada una
 def extract_producer(animes: list[dict]) -> list[dict]:
     """Extrae productores unicos de todos los animes."""
-    producers: dict[int, dict] = {}
+    producers= {}
     for anime in animes:
-        for p in anime["data"].get("producers", []):
-            pid = p["mal_id"]
+        data = anime.get("data", {}).get("producers", [])
+
+        for d in data:
+            pid = d.get("mal_id")
+
             if pid not in producers:
                 producers[pid] = {
                     "producer_id": pid,
-                    "name": p["name"],
-                    "url": p["url"],
+                    "name": d.get("name"),
+                    "url": d.get("url"),
                 }
+
     return list(producers.values())
 
 def generate_producers_sql(producers: list[dict]) -> str:
@@ -544,16 +548,21 @@ def generate_producers_sql(producers: list[dict]) -> str:
 
 def extract_licensor(animes: list[dict]) -> list[dict]:
     """Extrae licenciatarios unicos de todos los animes."""
-    licensors: dict[int, dict] = {}
+    licensors = {}
+
     for anime in animes:
-        for l in anime["data"].get("licensors", []):
-            lid = l["mal_id"]
+        data = anime.get("data", {}).get("licensors", [])
+
+        for d in data:
+            lid = d.get("mal_id")
+    
             if lid not in licensors:
                 licensors[lid] = {
                     "licensor_id": lid,
-                    "name": l["name"],
-                    "url": l["url"],
+                    "name": d.get("name"),
+                    "url": d.get("url"),
                 }
+
     return list(licensors.values())
 
 def generate_licensors_sql(licensors: list[dict]) -> str:
@@ -577,16 +586,21 @@ def generate_licensors_sql(licensors: list[dict]) -> str:
 
 def extract_studio(animes: list[dict]) -> list[dict]:
     """Extrae estudios unicos de todos los animes."""
-    studios: dict[int, dict] = {}
+    studios = {}
+
     for anime in animes:
-        for s in anime["data"].get("studios", []):
-            sid = s["mal_id"]
+        data = anime.get("data", {}).get("studios", [])
+
+        for d in data:
+            sid = d.get("mal_id")
+    
             if sid not in studios:
                 studios[sid] = {
                     "studio_id": sid,
-                    "name": s["name"],
-                    "url": s["url"],
+                    "name": d.get("name"),
+                    "url": d.get("url"),
                 }
+
     return list(studios.values())
 
 def generate_studios_sql(studios: list[dict]) -> str:
@@ -610,17 +624,23 @@ def generate_studios_sql(studios: list[dict]) -> str:
 
 def extract_explicit_genres(animes: list[dict]) -> list[dict]:
     """Extrae generos explicitos unicos de todos los animes."""
-    explicit_genres: dict[int, dict] = {}
+    explicit_genres = {}
+
     for anime in animes:
-        for e in anime["data"].get("explicit_genres", []):
-            eid = e["mal_id"]
-            if eid not in explicit_genres:
-                explicit_genres[eid] = {
-                    "explicit_genre_id": eid,
-                    "type": e["type"],
-                    "name": e["name"],
-                    "url": e["url"],
+
+        data = anime.get("data", {}).get("explicit_genres", [])
+
+        for d in data:
+            egid = d.get("mal_id")
+    
+            if egid not in explicit_genres:
+                explicit_genres[egid] = {
+                    "explicit_genre_id": egid,
+                    "type": d.get("type"),
+                    "name": d.get("name"),
+                    "url": d.get("url"),
                 }
+
     return list(explicit_genres.values())
 
 def generate_explicit_genres_sql(explicit_genres: list[dict]) -> str:
@@ -645,17 +665,22 @@ def generate_explicit_genres_sql(explicit_genres: list[dict]) -> str:
 
 def extract_themes(animes: list[dict]) -> list[dict]:
     """Extrae temas  unicos de todos los animes."""
-    themes: dict[int, dict] = {}
+    themes = {}
+
     for anime in animes:
-        for t in anime["data"].get("themes", []):
-            tid = t["mal_id"]
+        data = anime.get("data", {}).get("themes", [])
+
+        for d in data:
+            tid = d.get("mal_id")
+    
             if tid not in themes:
                 themes[tid] = {
                     "theme_id": tid,
-                    "type": t["type"],
-                    "name": t["name"],
-                    "url": t["url"],
+                    "type": d.get("type"),
+                    "name": d.get("name"),
+                    "url": d.get("url"),
                 }
+
     return list(themes.values())
 
 def generate_themes_sql(themes: list[dict]) -> str:
@@ -680,17 +705,22 @@ def generate_themes_sql(themes: list[dict]) -> str:
 
 def extract_demographics(animes: list[dict]) -> list[dict]:
     """Extrae demografías explicitos unicos de todos los animes."""
-    demographics: dict[int, dict] = {}
+    demographics = {}
+
     for anime in animes:
-        for d in anime["data"].get("demographics", []):
-            did = d["mal_id"]
+        data = anime.get("data", {}).get("demographics", [])
+
+        for d in data:
+            did = d.get("mal_id")
+    
             if did not in demographics:
                 demographics[did] = {
                     "demographic_id": did,
-                    "type": d["type"],
-                    "name": d["name"],
-                    "url": d["url"],
+                    "type": d.get("type"),
+                    "name": d.get("name"),
+                    "url": d.get("url"),
                 }
+
     return list(demographics.values())
 
 def generate_demographics_sql(demographics: list[dict]) -> str:
@@ -712,6 +742,7 @@ def generate_demographics_sql(demographics: list[dict]) -> str:
         )
 
     return "\n".join(lines)
+
 # =============================================================================
 # TODO: Tablas junction (relacion N:M entre anime y las entidades anteriores)
 # =============================================================================
@@ -901,12 +932,15 @@ def extract_relation(animes: list[dict]) -> list[dict]:
     i = 1
 
     for anime in animes:
-        anime_id = anime["data"]["mal_id"]
+        data = anime.get("data", {})
+        anime_id = data.get("mal_id")
+        relations_data = data.get("relations", [])
 
-        for r in anime["data"].get("relations", []):
+        for r in relations_data:
             relation_type = r.get("relation")
+            entries = r.get("entry", [])
 
-            for e in r.get("entry", []):
+            for e in entries:
                 relations.append({
                     "relation_id": i,
                     "anime_id": anime_id,
@@ -949,13 +983,16 @@ def generate_relation_sql(relation: list[dict]) -> str:
 # Ojo: streaming usa SERIAL -> mapear nombre -> id igual que season/rating.
 
 # TODO: implementar extraccion y generacion SQL para streaming y anime_streaming
-def extract_streaming(animes: list[dict]) -> dict:
-    streaming = {}
+def extract_streaming(animes: list[dict]) -> list[dict]:
+    """Extrae servicios de streaming unicos de todos los animes."""
+    streaming: dict[str, dict] = {}
     i = 1
 
     for anime in animes:
-        for s in anime["data"].get("streaming", []):
-            name = s.get("name")
+        data = anime.get("data", {}).get("streaming", [])
+
+        for d in data:
+            name = d.get("name")
 
             if name not in streaming:
                 streaming[name] = {
@@ -963,6 +1000,7 @@ def extract_streaming(animes: list[dict]) -> dict:
                     "name": name
                 }
                 i += 1
+
     return streaming
 
 def generate_streaming_sql(streaming: dict) -> str:
@@ -987,18 +1025,17 @@ def extract_anime_streaming(animes: list[dict], streaming: dict) -> list[dict]:
     anime_streaming = []
 
     for anime in animes:
-        aid = anime["data"]["mal_id"]
-
-        for s in anime["data"].get("streaming", []):
-            name = s.get("name")
-
+        data = anime.get("data", {}).get("streaming", [])
+       
+        for d in data:
+            name = d.get("name")
             streaming_id = streaming.get(name, {}).get("streaming_id")
 
             if streaming_id is not None:
                 anime_streaming.append({
-                    "anime_id": aid,
+                    "anime_id": anime.get("data", {}).get("mal_id"),
                     "streaming_id": streaming_id,
-                    "url": s.get("url")
+                    "url": d.get("url")
                 })
 
     return anime_streaming
@@ -1116,22 +1153,24 @@ def generate_anime_character_sql(anime_character: list[tuple[int, int]]) -> str:
         )
     return "\n".join(lines)
 
-def extract_voice_actor(characters: list[dict]) -> list[dict]:
+def extract_voice_actor(characters: list[dict]) -> dict[str, dict]:
     voice_actors = {}
     
     for c in characters:
-        for data in c.get("data", []):
-            for va in data.get("voice_actors", []):
-                person = va["person"]
+        data = c.get("data", [])
 
-                vid = person["mal_id"]
+        for d in data:
+            for va in d.get("voice_actors", []):
+                person = va.get("person", {})
+                vid = person.get("mal_id")
 
-                voice_actors[vid] = {
-                    "voice_actor_id": vid,
-                    "name": person["name"],
-                    "image_url": person["images"]["jpg"]["image_url"],
-                    "language": va["language"]
-                }
+                if vid not in voice_actors:
+                    voice_actors[vid] = {
+                        "voice_actor_id": vid,
+                        "name": person.get("name"),
+                        "image_url": person.get("images", {}).get("jpg", {}).get("image_url"),
+                        "language": va.get("language")
+                    }   
 
     return list(voice_actors.values())
 
@@ -1162,14 +1201,15 @@ def extract_character_voice_actor(characters: list[dict]) -> list[dict]:
         data = c.get("data", [])
 
         for d in data:
-            char_id = d["character"]["mal_id"]
+            char = d["character"]
 
             for va in d.get("voice_actors", []):
-                person = va["person"]
+                person = va.get("person", {})
+                vid = person.get("mal_id")
 
                 character_voice_actor.append({
-                    "character_id": char_id,
-                    "voice_actor_id": person["mal_id"]
+                    "character_id": char["mal_id"],
+                    "voice_actor_id": vid
                 })
 
     return character_voice_actor
@@ -1209,7 +1249,79 @@ def generate_character_voice_actor_sql(character_voice_actor: list[tuple[int, in
 #   "anime_id": int
 
 # TODO: implementar extraccion y generacion SQL
+def extract_staff(staff: list[dict]) -> list[dict]:
+    staff_list = []
 
+    for s in staff:
+        data = s.get("data", [])
+
+        for d in data:
+            st = d["person"]
+
+            staff_list.append({
+                "staff_id": st["mal_id"],
+                "url": st["url"],
+                "image_url": st["images"]["jpg"]["image_url"],
+                "name": st["name"]
+            })
+
+    return staff_list
+
+def generate_staff_sql(staff) -> str:
+    lines: list[str] = [
+        "DROP TABLE IF EXISTS staff CASCADE;",
+        "",
+        "CREATE TABLE staff (",
+        "    staff_id INTEGER PRIMARY KEY,",
+        "    url TEXT,",
+        "    image_url TEXT,",
+        "    name TEXT",
+        ");",
+        "",
+    ]
+    for s in staff:
+        lines.append(
+            f"INSERT INTO staff (staff_id, url, image_url, name) "
+            f"VALUES ({val(s['staff_id'])}, {val(s['url'])}, {val(s['image_url'])}, {val(s['name'])});"
+        )
+
+    return "\n".join(lines)
+
+def extract_anime_staff(staff: list[dict]) -> list[dict]:
+    anime_staff = []
+
+    for s in staff:
+        data = s.get("data", [])
+
+        for d in data:
+
+            for position in d.get("positions", []):
+                anime_staff.append({
+                    "anime_id": d["anime_id"],
+                    "staff_id": d["person"]["mal_id"],
+                    "position": position
+                })
+
+    return anime_staff
+
+def generate_anime_staff_sql(anime_staff: list[tuple[int, int, str]]) -> str:
+    lines: list[str] = [
+        "DROP TABLE IF EXISTS anime_staff CASCADE;",
+        "",
+        "CREATE TABLE anime_staff (",
+        "    anime_id INTEGER REFERENCES anime(anime_id),",
+        "    staff_id INTEGER REFERENCES staff(staff_id),",
+        "    position TEXT,",
+        "    PRIMARY KEY (anime_id, staff_id, position)",
+        ");",
+        "",
+    ]
+    for as_ in anime_staff:
+        lines.append(
+            f"INSERT INTO anime_staff (anime_id, staff_id, position) "
+            f"VALUES ({val(as_['anime_id'])}, {val(as_['staff_id'])}, {val(as_['position'])});"
+        )
+    return "\n".join(lines)
 
 # =============================================================================
 # Script principal
@@ -1256,6 +1368,9 @@ if __name__ == "__main__":
     voice_actors = extract_voice_actor(characters)
     character_voice_actor = extract_character_voice_actor(characters)
 
+    staff_list = extract_staff(staff)
+    anime_staff = extract_anime_staff(staff)
+
     print(f"\nGeneros extraidos: {len(genres)}")
     print(f"\nPares anime-genero: {len(anime_genre_pairs)}")
 
@@ -1288,6 +1403,8 @@ if __name__ == "__main__":
     print(f"\nanime-personajes: {len(anime_character)}")
     print(f"\nVoice actors extraidos: {len(voice_actors)}")
     print(f"\npersonajes-voice_actors: {len(character_voice_actor)}")
+    print(f"\nStaff extraidos: {len(staff_list)}")
+    print(f"\nanime-staff: {len(anime_staff)}")
 
     # Generar dump.sql
     # IMPORTANTE: deben respetar el orden de creacion segun las dependencias
@@ -1331,6 +1448,9 @@ if __name__ == "__main__":
     dump_parts.append(generate_voice_actors_sql(voice_actors))
     dump_parts.append(generate_character_voice_actor_sql(character_voice_actor))
 
+    dump_parts.append(generate_staff_sql(staff_list))
+    dump_parts.append(generate_anime_staff_sql(anime_staff))
+    
     with open("dump.sql", "w", encoding="utf-8") as f:
         f.write("\n\n".join(dump_parts) + "\n")
 
